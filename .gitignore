@@ -8,3 +8,7 @@ frontend/node_modules/
 frontend/dist/
 .vite/
 *.log
+
+# Local-only generated docs (not needed for build/deploy — kept out of GitHub)
+Demo_Guide_*.docx
+*.docx
