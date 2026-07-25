@@ -209,11 +209,42 @@ function SafetyPlan({ userId }: { userId?: string }) {
   );
 }
 
+/** Voice input for the Co-Pilot chat box using the browser's built-in Web
+ * Speech API (spec.md Section 3.7 — multi-modal access). No backend change
+ * needed: speech-to-text runs entirely in the browser. */
+function useSpeechToText(onResult: (text: string) => void) {
+  const [listening, setListening] = useState(false);
+  const [supported, setSupported] = useState(true);
+
+  function start() {
+    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    if (!SpeechRecognition) {
+      setSupported(false);
+      return;
+    }
+    const recognition = new SpeechRecognition();
+    recognition.lang = "en-US";
+    recognition.interimResults = false;
+    recognition.maxAlternatives = 1;
+    recognition.onstart = () => setListening(true);
+    recognition.onend = () => setListening(false);
+    recognition.onerror = () => setListening(false);
+    recognition.onresult = (event: any) => {
+      const transcript = event.results[0][0].transcript;
+      onResult(transcript);
+    };
+    recognition.start();
+  }
+
+  return { start, listening, supported };
+}
+
 /** Recovery Co-Pilot chatbot — grounded Q&A with anti-hallucination guardrail (spec.md Section 3.5). */
 function CoPilot({ userId }: { userId?: string }) {
   const [question, setQuestion] = useState("");
   const [answer, setAnswer] = useState<CoPilotAnswer | null>(null);
   const [asking, setAsking] = useState(false);
+  const speech = useSpeechToText((transcript) => setQuestion(transcript));
 
   async function ask() {
     if (!userId || !question.trim()) return;
@@ -228,12 +259,24 @@ function CoPilot({ userId }: { userId?: string }) {
   return (
     <section aria-labelledby="copilot-heading">
       <h2 id="copilot-heading" className="section-title">Recovery Co-Pilot</h2>
-      <p className="section-sub">Ask anything about recovery, coping, or your Safety Plan.</p>
+      <p className="section-sub">Ask anything about recovery, coping, or your Safety Plan — by typing or by voice.</p>
 
       <div className="card">
         <div className="chat-row">
           <input className="input" value={question} onChange={(e) => setQuestion(e.target.value)}
                  onKeyDown={(e) => e.key === "Enter" && ask()} placeholder="e.g. What are my known triggers?" />
+          {speech.supported && (
+            <button
+              type="button"
+              className="btn-ghost"
+              onClick={speech.start}
+              disabled={speech.listening}
+              aria-label="Ask by voice"
+              title="Ask by voice"
+            >
+              {speech.listening ? "🎙️ Listening…" : "🎤"}
+            </button>
+          )}
           <button className="btn" onClick={ask} disabled={asking}>{asking ? "Asking…" : "Ask"}</button>
         </div>
         {answer && (
