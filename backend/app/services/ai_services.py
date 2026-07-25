@@ -219,6 +219,8 @@ coping strategies, support contacts, or personal details not listed. If the prof
 empty or too sparse to personalize, generate a SAFE GENERIC grounding script instead and \
 say so explicitly in the "grounded_fields" list (empty list = generic fallback).
 
+Write the script in the language with ISO code "{language}".
+
 Recovery Profile:
 - Known triggers: {triggers}
 - Coping strategies that have worked before: {coping_strategies}
@@ -231,25 +233,37 @@ Return ONLY a JSON object (no prose, no markdown fences) with exactly these keys
 """
 
 
-def _generic_script_fallback() -> dict:
+_GENERIC_SCRIPT_FALLBACK = {
+    "en": (
+        "You're safe right now. Take a slow breath in for 4 counts, hold for 4, and out for 6. "
+        "Name 5 things you can see around you, 4 things you can touch, 3 things you can hear. "
+        "This feeling is temporary and it will pass. If you are in danger, please call your local "
+        "emergency number or a crisis line right now."
+    ),
+    "es": (
+        "Estás a salvo en este momento. Respira lento: inhala 4 segundos, mantén 4, exhala 6. "
+        "Nombra 5 cosas que puedas ver, 4 que puedas tocar y 3 que puedas oír. "
+        "Esta sensación es temporal y va a pasar. Si estás en peligro, llama a tu número de "
+        "emergencia local o a una línea de crisis ahora mismo."
+    ),
+}
+
+
+def _generic_script_fallback(language: str = "en") -> dict:
     return {
-        "script": (
-            "You're safe right now. Take a slow breath in for 4 counts, hold for 4, and out for 6. "
-            "Name 5 things you can see around you, 4 things you can touch, 3 things you can hear. "
-            "This feeling is temporary and it will pass. If you are in danger, please call your local "
-            "emergency number or a crisis line right now."
-        ),
+        "script": _GENERIC_SCRIPT_FALLBACK.get(language, _GENERIC_SCRIPT_FALLBACK["en"]),
         "grounded_fields": [],
     }
 
 
-def generate_emergency_script(profile: dict) -> dict:
-    """Generate a personalized emergency script grounded in the user's Recovery Profile.
+def generate_emergency_script(profile: dict, language: str = "en") -> dict:
+    """Generate a personalized emergency script grounded in the user's Recovery Profile,
+    written in the user's `preferred_language` (spec.md Section 3.7 — multi-language access).
 
     spec.md Section 4.8/4.9: uses a real Gemini call when USE_MOCK_AI=false.
     Every field the model claims to have used is verified against the actual
     profile text; if verification fails or the model call fails, falls back
-    to a safe generic script rather than surfacing fabricated content.
+    to a safe generic script (also localized) rather than surfacing fabricated content.
     """
     triggers = ", ".join(profile.get("triggers", [])) or "(none logged)"
     coping = ", ".join(profile.get("coping_strategies", [])) or "(none logged)"
@@ -258,7 +272,7 @@ def generate_emergency_script(profile: dict) -> dict:
 
     if _gemini_available():
         try:
-            prompt = _SCRIPT_PROMPT.format(triggers=triggers, coping_strategies=coping, support_contacts=contacts)
+            prompt = _SCRIPT_PROMPT.format(triggers=triggers, coping_strategies=coping, support_contacts=contacts, language=language)
             raw = _call_gemini(prompt)
             cleaned = raw.strip().removeprefix("```json").removeprefix("```").removesuffix("```").strip()
             parsed = json.loads(cleaned)
@@ -271,7 +285,7 @@ def generate_emergency_script(profile: dict) -> dict:
             logger.warning("generate_emergency_script: Gemini call failed, using generic fallback", exc_info=True)
 
     if settings.use_mock_ai:
-        base = _generic_script_fallback()
+        base = _generic_script_fallback(language)
         if profile.get("coping_strategies"):
             base["script"] = (
                 f"[MOCK] Remember your coping strategy: {profile['coping_strategies'][0]}. "
@@ -280,7 +294,7 @@ def generate_emergency_script(profile: dict) -> dict:
             base["grounded_fields"] = ["coping_strategies"]
         return base
 
-    return _generic_script_fallback()
+    return _generic_script_fallback(language)
 
 
 # ---------------------------------------------------------------------------

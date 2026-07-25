@@ -12,8 +12,10 @@ from app.services.notification_service import send_caregiver_alert
 def trigger_crisis(user_id: str, trigger_method: str = "tap", shared_context: str | None = None) -> dict:
     db = get_firestore_client()
     profile = _get_profile_for_user(db, user_id)
+    individual = db.collection("users").get(user_id)
+    individual_language = (individual or {}).get("preferred_language", "en")
 
-    result = generate_emergency_script(profile or {})
+    result = generate_emergency_script(profile or {}, individual_language)
 
     event = CrisisEvent(
         id=str(uuid.uuid4()), user_id=user_id, triggered_at=datetime.now(timezone.utc),
@@ -21,7 +23,7 @@ def trigger_crisis(user_id: str, trigger_method: str = "tap", shared_context: st
         grounded_fields=result["grounded_fields"], status=CrisisStatus.OPEN,
     )
 
-    user = db.collection("users").get(user_id)
+    user = individual
     caregiver_alert = None
     if user and user.get("linked_user_ids"):
         caregiver_id = user["linked_user_ids"][0]
