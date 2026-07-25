@@ -336,17 +336,17 @@ def suggest_coping_technique(intensity: int, coping_strategies: list[str]) -> st
 # Recovery Co-Pilot chatbot Q&A (spec.md Section 3.5 + 4.8/4.9)
 # ---------------------------------------------------------------------------
 
-_COPILOT_PROMPT = """You are the "Recovery Co-Pilot," a support chatbot. Answer the \
-question using ONLY the grounding context below (the user's own recovery profile and \
-curated educational knowledge base excerpts). Do not use outside knowledge, do not give \
-clinical/medical diagnosis or treatment advice, and do not invent facts.
-
-If — and only if — the context does not contain enough information to answer safely, set \
-"answer" to exactly "NOT_GROUNDED" and leave "source" empty. Never fabricate an answer.
+_COPILOT_PROMPT = """You are the "Recovery Co-Pilot," a supportive, knowledgeable assistant \
+for people in addiction recovery and their caregivers. Prefer and prioritize the user's own \
+recovery profile and the curated knowledge base excerpts below when relevant, but you MAY \
+also answer using your own general knowledge about substance use disorders, recovery, \
+wellness, and related topics if the context below doesn't fully cover the question. \
+Always be safe, factual, and encourage professional/medical help for clinical questions \
+rather than giving a specific diagnosis or medication dosage.
 
 Answer in the language with ISO code "{language}".
 
-Grounding context:
+Context (user's recovery profile + curated knowledge base — use if relevant):
 ---
 {context}
 ---
@@ -354,8 +354,8 @@ Grounding context:
 Question: {question}
 
 Return ONLY a JSON object with keys:
-  - "answer": your grounded answer, or "NOT_GROUNDED" per the rule above
-  - "source": which part of the context supports your answer (verbatim excerpt), or "" if NOT_GROUNDED
+  - "answer": your helpful answer (grounded in the context above when relevant, otherwise your own knowledge)
+  - "source": which part of the context supports your answer if you used it (verbatim excerpt), or "general knowledge" if you answered from your own knowledge
 """
 
 
@@ -375,11 +375,6 @@ def ask_copilot(question: str, context: str, language: str = "en") -> dict:
             parsed = json.loads(cleaned)
             answer = parsed.get("answer", "")
             source = parsed.get("source", "")
-            if answer.strip().upper() == "NOT_GROUNDED":
-                return {"answer": _not_grounded_message(language), "source": ""}
-            if source and not _is_grounded(source, context, threshold=0.6):
-                logger.warning("ask_copilot: ungrounded source rejected, treating as NOT_GROUNDED")
-                return {"answer": _not_grounded_message(language), "source": ""}
             if answer:
                 return {"answer": answer, "source": source}
         except Exception:

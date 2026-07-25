@@ -13,7 +13,14 @@ function useUsers() {
 export default function App() {
   const [tab, setTab] = useState<"crisis" | "profile" | "copilot" | "caregiver">("crisis");
   const users = useUsers();
-  const individual = useMemo(() => users.find((u) => u.role === "individual"), [users]);
+  const individuals = useMemo(() => users.filter((u) => u.role === "individual"), [users]);
+  const [selectedUserId, setSelectedUserId] = useState<string>("");
+
+  useEffect(() => {
+    if (!selectedUserId && individuals.length > 0) setSelectedUserId(individuals[0].id);
+  }, [individuals, selectedUserId]);
+
+  const individual = useMemo(() => individuals.find((u) => u.id === selectedUserId) ?? individuals[0], [individuals, selectedUserId]);
 
   return (
     <div className="app-shell">
@@ -26,6 +33,23 @@ export default function App() {
               <p className="brand-tagline">Support when cognitive load is highest — zero typing, always grounded.</p>
             </div>
           </div>
+          {individuals.length > 0 && (
+            <label className="user-switcher">
+              <span>Demo user:</span>
+              <select
+                className="input"
+                value={individual?.id ?? ""}
+                onChange={(e) => setSelectedUserId(e.target.value)}
+                aria-label="Select demo user"
+              >
+                {individuals.map((u) => (
+                  <option key={u.id} value={u.id}>
+                    {u.name} ({u.preferred_language.toUpperCase()})
+                  </option>
+                ))}
+              </select>
+            </label>
+          )}
         </div>
       </header>
 
@@ -45,9 +69,9 @@ export default function App() {
           </button>
         </div>
 
-        {tab === "crisis" && <CrisisMode userId={individual?.id} />}
-        {tab === "profile" && <SafetyPlan userId={individual?.id} />}
-        {tab === "copilot" && <CoPilot userId={individual?.id} />}
+        {tab === "crisis" && <CrisisMode key={individual?.id} userId={individual?.id} />}
+        {tab === "profile" && <SafetyPlan key={individual?.id} userId={individual?.id} />}
+        {tab === "copilot" && <CoPilot key={individual?.id} userId={individual?.id} />}
         {tab === "caregiver" && <CaregiverDashboard />}
       </main>
     </div>
@@ -204,7 +228,7 @@ function CoPilot({ userId }: { userId?: string }) {
   return (
     <section aria-labelledby="copilot-heading">
       <h2 id="copilot-heading" className="section-title">Recovery Co-Pilot</h2>
-      <p className="section-sub">Grounded strictly in your Safety Plan and curated resources. It will say "I don't know" rather than guess.</p>
+      <p className="section-sub">Ask anything about recovery, coping, or your Safety Plan.</p>
 
       <div className="card">
         <div className="chat-row">

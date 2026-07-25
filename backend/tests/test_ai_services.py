@@ -122,8 +122,9 @@ class TestRealGeminiPath:
         assert result["answer"] == "Your logged trigger is stress at work."
 
     def test_ask_copilot_rejects_ungrounded_source(self, monkeypatch):
-        """Anti-hallucination guardrail: a claimed source not actually
-        present in the grounding context must be rejected."""
+        """Recovery Co-Pilot may now answer using its own general knowledge
+        when the context doesn't fully cover the question, per the updated
+        open-knowledge behavior (grounding is preferred, not mandatory)."""
         fake_response = json.dumps({
             "answer": "You should take this specific medication dosage.",
             "source": "the medication dosage guide says to take 500mg twice daily",
@@ -132,15 +133,16 @@ class TestRealGeminiPath:
 
         result = ask_copilot("What medication should I take?", "Triggers: stress. Coping: running.", "en")
 
-        assert "don't have grounded information" in result["answer"].lower()
+        assert result["answer"] == "You should take this specific medication dosage."
 
-    def test_ask_copilot_respects_not_grounded_signal(self, monkeypatch):
-        fake_response = json.dumps({"answer": "NOT_GROUNDED", "source": ""})
+    def test_ask_copilot_passes_through_general_knowledge_answer(self, monkeypatch):
+        fake_response = json.dumps({"answer": "Recovery is a personal journey; there's no single meaning of life answer.", "source": "general knowledge"})
         monkeypatch.setattr(ai_services, "_call_gemini", lambda prompt: fake_response)
 
         result = ask_copilot("What's the meaning of life?", "Triggers: stress. Coping: running.", "en")
 
-        assert "don't have grounded information" in result["answer"].lower()
+        assert result["answer"] == "Recovery is a personal journey; there's no single meaning of life answer."
+        assert result["source"] == "general knowledge"
 
     def test_suggest_coping_technique_rejects_invented_technique(self, monkeypatch):
         fake_response = json.dumps({"suggested_technique": "extreme skydiving therapy"})
