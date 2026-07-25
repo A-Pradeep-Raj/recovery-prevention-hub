@@ -185,9 +185,17 @@ def _translate_via_adc(text: str, target_language: str) -> str:
 def _translate_cached(text: str, target_language: str, source_language: str | None) -> str:
     if settings.use_mock_ai or target_language == source_language:
         return f"[MOCK-{target_language.upper()}] {text}"
-    try:
-        if settings.genai_api_key:
+    # Try the API-key REST path first; if it fails (e.g. the key isn't
+    # scoped to translate.googleapis.com), retry via Vertex/ADC before
+    # falling back to mock — mirrors _call_gemini's fallback chain so a
+    # single-service key restriction never surfaces [MOCK...] output
+    # during a live demo (spec.md Section 4.9).
+    if settings.genai_api_key:
+        try:
             return _translate_via_api_key(text, target_language, source_language)
+        except Exception:
+            logger.warning("translate_text: GENAI_API_KEY call failed, retrying via Cloud Translation ADC", exc_info=True)
+    try:
         return _translate_via_adc(text, target_language)
     except Exception:
         logger.warning("translate_text: Cloud Translation call failed, falling back to mock", exc_info=True)
