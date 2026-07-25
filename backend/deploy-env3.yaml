@@ -1,0 +1,5 @@
+USE_MOCK_AI: "false"
+SEED_DEMO_DATA: "false"
+GCP_PROJECT_ID: "recovery-hub-1778"
+GCP_REGION: "us-central1"
+ALLOWED_ORIGINS: "https://recovery-hub-frontend-566288522012.us-central1.run.app,http://localhost:5173,http://127.0.0.1:5173"

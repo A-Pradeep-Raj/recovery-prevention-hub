@@ -1,0 +1,12 @@
+﻿{
+    "contents":  [
+                     {
+                         "role":  "user",
+                         "parts":  [
+                                       {
+                                           "text":  "You are generating a short, calming emergency support script for someone in acute crisis (craving, panic, or early relapse risk). The person\u0027s cognitive load is very high right now — keep language simple, warm, and grounding.\n\nYou MUST base the script ONLY on the recovery profile facts given below. Do NOT invent coping strategies, support contacts, or personal details not listed. If the profile is empty or too sparse to personalize, generate a SAFE GENERIC grounding script instead and say so explicitly in the \"grounded_fields\" list (empty list = generic fallback).\n\nRecovery Profile:\n- Known triggers: loneliness, anniversary dates\n- Coping strategies that have worked before: journaling, call Miguel\n- Support contacts: Miguel Ortiz\n\nReturn ONLY a JSON object (no prose, no markdown fences) with exactly these keys:\n  - \"script\": the calming, grounding script text (3-6 short sentences, plain language)\n  - \"grounded_fields\": array of profile field names actually referenced (e.g. [\"coping_strategies\", \"support_contacts\"]), or [] if this is a generic fallback script"
+                                       }
+                                   ]
+                     }
+                 ]
+}

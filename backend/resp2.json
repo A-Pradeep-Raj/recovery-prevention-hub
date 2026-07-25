@@ -1,0 +1,38 @@
+﻿{
+  "candidates": [
+    {
+      "content": {
+        "role": "model",
+        "parts": [
+          {
+            "text": "```json\n{\n  \"script\": \"Take a deep breath. You're feeling a lot right now, and that's okay. Remember, journaling has helped you before. Or you can call Miguel. You're not alone, and you will get through this.\",\n  \"grounded_fields\": [\n    \"coping_strategies\",\n    \"support_contacts\"\n  ]\n}\n```"
+          }
+        ]
+      },
+      "finishReason": "STOP",
+      "avgLogprobs": -2.5266792990944604
+    }
+  ],
+  "usageMetadata": {
+    "promptTokenCount": 232,
+    "candidatesTokenCount": 88,
+    "totalTokenCount": 989,
+    "trafficType": "ON_DEMAND",
+    "promptTokensDetails": [
+      {
+        "modality": "TEXT",
+        "tokenCount": 232
+      }
+    ],
+    "candidatesTokensDetails": [
+      {
+        "modality": "TEXT",
+        "tokenCount": 88
+      }
+    ],
+    "thoughtsTokenCount": 669
+  },
+  "modelVersion": "gemini-2.5-flash",
+  "createTime": "2026-07-25T07:05:24.918667Z",
+  "responseId": "NGBkaouJOMKKycEP9PTc6Qc"
+}

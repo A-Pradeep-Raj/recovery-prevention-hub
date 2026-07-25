@@ -1,0 +1,11 @@
+[
+  {
+    "id": "profile-1",
+    "user_id": "user-1",
+    "triggers": ["stress at work", "seeing old friends from that period", "Friday nights"],
+    "coping_strategies": ["call Sam", "go for a run", "5-4-3-2-1 grounding exercise"],
+    "support_contacts": ["Sam Lee (sponsor/caregiver)", "local crisis line 988"],
+    "sobriety_start_date": "2025-01-15",
+    "notes": "Responds well to short, direct grounding scripts. Dislikes long breathing exercises."
+  }
+]

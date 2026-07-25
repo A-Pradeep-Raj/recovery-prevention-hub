@@ -1,0 +1,13 @@
+[tool.black]
+line-length = 110
+target-version = ["py311"]
+exclude = '''
+/(
+    venv
+  | __pycache__
+  | \.pytest_cache
+)/
+'''
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

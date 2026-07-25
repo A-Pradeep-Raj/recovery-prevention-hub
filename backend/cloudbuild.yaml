@@ -1,0 +1,8 @@
+# Run from the REPO ROOT (not backend/):
+#   gcloud builds submit --config=backend/cloudbuild.yaml \
+#     --substitutions=_IMAGE=us-central1-docker.pkg.dev/PROJECT/recovery-hub/backend:latest .
+steps:
+  - name: "gcr.io/cloud-builders/docker"
+    args: ["build", "-f", "backend/Dockerfile", "-t", "$_IMAGE", "."]
+images:
+  - "$_IMAGE"

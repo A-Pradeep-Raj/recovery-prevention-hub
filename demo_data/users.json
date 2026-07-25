@@ -1,0 +1,34 @@
+[
+  {
+    "id": "user-1",
+    "name": "Jordan Lee",
+    "email": "jordan.lee@example.com",
+    "role": "individual",
+    "preferred_language": "en",
+    "linked_user_ids": ["user-2"]
+  },
+  {
+    "id": "user-2",
+    "name": "Sam Lee",
+    "email": "sam.lee@example.com",
+    "role": "caregiver",
+    "preferred_language": "en",
+    "linked_user_ids": []
+  },
+  {
+    "id": "user-3",
+    "name": "Priya Nair",
+    "email": "priya.nair@example.com",
+    "role": "individual",
+    "preferred_language": "es",
+    "linked_user_ids": ["user-4"]
+  },
+  {
+    "id": "user-4",
+    "name": "Miguel Ortiz",
+    "email": "miguel.ortiz@example.com",
+    "role": "caregiver",
+    "preferred_language": "es",
+    "linked_user_ids": []
+  }
+]
