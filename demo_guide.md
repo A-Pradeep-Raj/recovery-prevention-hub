@@ -6,18 +6,26 @@
 
 ## 0. Live Verification Status (2026-07-25)
 
-A full rehearsal pass was run directly against the deployed backend
-(`recovery-hub-backend`, Cloud Run, `USE_MOCK_AI=false` + `SEED_DEMO_DATA=false`)
-covering every step below. **All 9 checks passed** — see `TESTING.md` → "Live
-Deployment Verification" for full request/response evidence. Highlights:
+Two full rehearsal passes were run against the deployed environment
+(`recovery-hub-backend` + `recovery-hub-frontend` on Cloud Run,
+`USE_MOCK_AI=false` + `SEED_DEMO_DATA=false`): first at the API level, then a
+full **browser click-through** of the actual judged URL
+(https://recovery-hub-frontend-566288522012.us-central1.run.app/) covering
+every step below, with screenshots captured live (see `docs/screenshots/` and
+embedded inline in Section 2). **Every check passed** — see `TESTING.md` →
+"Live Deployment Verification" for full request/response evidence. Highlights:
 
 - Crisis trigger → grounded script + caregiver alert: **4.02 seconds end-to-end** (target: <30s)
-- Anti-hallucination guardrail correctly refused a clinical/medication question
+- The `Grounded in:` trace correctly listed `known_triggers, coping_strategies, support_contacts`
+  after the script referenced the user's actual triggers, coping strategies, and contacts
+- Anti-hallucination guardrail correctly refused a clinical/medication question in the live UI
 - Multi-language flow (Spanish profile) produced a real translated script + caregiver alert
-- Cloud Run logs confirmed **zero `[MOCK...]`-prefixed output** anywhere during the run
-- One real bug was found and fixed during this pass: caregiver-alert translation was
+- Caregiver Dashboard acknowledgment flow worked end-to-end in the browser
+- Cloud Run logs confirmed **zero `[MOCK...]`-prefixed output** anywhere during either run
+- One real bug was found and fixed during the API-level pass: caregiver-alert translation was
   silently falling back to `[MOCK-ES]` when the API key lacked Translation scope; it now
-  retries via Vertex AI/ADC first (see `TESTING.md` for details) — redeployed and re-verified.
+  retries via Vertex AI/ADC first (see `TESTING.md` for details) — redeployed and re-verified
+  in the browser pass with no mock output.
 
 ## 1. Pre-Demo Checklist
 
@@ -25,9 +33,9 @@ Deployment Verification" for full request/response evidence. Highlights:
 - [x] Confirm `/health` returns `{"status":"ok"}` and `GET /api/users` returns real accounts
       while crisis/profile endpoints start empty
 - [x] Frontend deployed/running and pointed at that backend
-- [ ] Rehearse the full live flow at least twice **in the UI** with real, unscripted profiles
-      (API-level rehearsal completed 2026-07-25 — see Section 0; still do a UI click-through
-      before judging since judges will watch the browser, not the API)
+- [x] Rehearse the full live flow at least twice **in the UI** with real, unscripted profiles —
+      completed 2026-07-25 end-to-end in the browser at the judged URL (see Section 0 and the
+      screenshots throughout Section 2)
 - [x] `pytest -q` green (33 passed in 0.49s) — offline/mocked tests only, not a substitute for the live run
 - [ ] After any redeploy, recreate at least one real profile via the UI before judges arrive —
       the backend's in-memory store is wiped on every deploy (this is expected/desired per
@@ -38,31 +46,57 @@ Deployment Verification" for full request/response evidence. Highlights:
 
 ## 2. Step-by-Step Walkthrough (Fully Live)
 
+> All screenshots below were captured live against
+> https://recovery-hub-frontend-566288522012.us-central1.run.app/ on 2026-07-25
+> and are stored in `docs/screenshots/`. They are for presenter rehearsal
+> reference only — during actual judging, perform every step live in the
+> browser rather than showing these images.
+
 ### Step 1 — Problem Intro
 **Say:** "When cognitive load is highest — a craving, a panic moment — typing or navigating a menu is the wrong interaction model. Everything you're about to see is generated live against real Gemini."
+
+![Crisis Mode landing screen with the single I need help now button](docs/screenshots/01-crisis-mode-landing.png)
+
+*This is the very first thing a user sees — one large tap target, zero forms, and a persistent reminder to call real emergency services if needed.*
 
 ### Step 2 — Build a Real Safety Plan
 **Do:** In the Safety Plan tab, live-enter real triggers, coping strategies, and a support contact for a real user account. Save it.
 
+![Safety Plan filled in and saved, showing Current Plan and Craving Check-In sections](docs/screenshots/03-safety-plan.png)
+
+*Screenshot captured live at https://recovery-hub-frontend-566288522012.us-central1.run.app/ on 2026-07-25 — triggers `stress at work, Friday nights`, coping strategies `call my sponsor, go for a run, journaling`, support contacts `Sam Lee, 988 crisis line`, all entered and saved via the UI (no typing shortcuts, no seeded data).*
+
 ### Step 3 — Zero-Typing Crisis Trigger
 **Say:** "One tap. No typing." **Do:** Switch to Crisis Mode, tap "I need help now." Show the "Grounded in: ..." trace proving the script used the profile just entered, not a canned response.
 
-**Verified example (2026-07-25):** with a profile of `coping_strategies: ["call my sponsor", "go for a run", "journaling"]` and `support_contacts: ["Sam Lee", "988 crisis line"]`, the live response arrived in **4.02 seconds** and read: *"It sounds like things are tough right now. Take a deep breath. You've gotten through this before. Remember, you can call your sponsor, go for a run, or try journaling. You can also reach out to Sam Lee, or call the 988 crisis line. You're not alone."* with `Grounded in: coping_strategies, support_contacts`. Every named strategy/contact traces back to what was typed in Step 2 — nothing invented.
+![Crisis Mode grounded result showing the generated script, Grounded in trace, and caregiver alert confirmation](docs/screenshots/02-crisis-mode-grounded-result.png)
+
+**Verified example (2026-07-25), captured live in the browser:** with the profile from Step 2, tapping "I need help now" returned in a few seconds: *"Take a deep breath. It sounds like a tough moment, maybe stress from work or a Friday night feeling. Remember what helped before: calling your sponsor, going for a run, or journaling. You can also reach out to Sam Lee or call the 988 crisis line. You are not alone. This moment will pass."* with `Grounded in: known_triggers, coping_strategies, support_contacts` and a caregiver-alerted confirmation box. A separate API-level timing run measured **4.02 seconds** end-to-end (target: <30s). Every named trigger/strategy/contact traces back to what was typed in Step 2 — nothing invented.
 
 ### Step 4 — Caregiver Alert
 **Do:** Switch to Caregiver Dashboard, show the live alert with context + suggested action, and acknowledge it.
 
+![Caregiver Dashboard showing three real alerts, one acknowledged and two awaiting acknowledgment](docs/screenshots/07-caregiver-dashboard.png)
+
+*Screenshot captured live — note the alert list includes both an English and a Spanish-language alert (from the multi-language rehearsal in Step 6.5), and the acknowledgment toggle (⏳ → ✅) was exercised live in the browser.*
+
 ### Step 5 — Recovery Co-Pilot (Grounded + Ungrounded)
 **Do:** Ask a real question grounded in the Safety Plan (get a grounded answer + source). Then ask an unrelated/unsafe question live and show the explicit "I don't have grounded information" guardrail response.
 
-**Verified example — grounded:** *"What coping strategies have worked for me before?"* → *"Based on your profile, coping strategies that have worked for you before include calling your sponsor, going for a run, and journaling."* with source citation `"Coping strategies: call my sponsor, go for a run, journaling."`
+![Recovery Co-Pilot grounded answer with source citation](docs/screenshots/05-copilot-grounded.png)
 
-**Verified example — guardrail:** *"What medication dosage should I take for my withdrawal symptoms?"* → *"I don't have grounded information about that in your recovery profile or our knowledge base. Please contact your care team or a crisis line for guidance."* — no fabricated clinical claim, no source.
+**Verified example — grounded:** *"What coping strategies have worked for me before?"* → *"You have found that calling your sponsor, going for a run, and journaling are effective coping strategies."* with source citation `"Coping strategies: call my sponsor, go for a run, journaling."`
+
+![Recovery Co-Pilot anti-hallucination guardrail refusing an ungrounded medical question](docs/screenshots/06-copilot-guardrail.png)
+
+**Verified example — guardrail:** *"What medication dosage should I take for my withdrawal symptoms?"* → *"I don't have grounded information about that in your recovery profile or our knowledge base. Please contact your care team or a crisis line for guidance."* — no fabricated clinical claim, no source. Both responses captured live in the browser, back-to-back, in the same Co-Pilot session.
 
 ### Step 6 — Craving Check-In
 **Do:** Tap a craving intensity level, show the live-suggested coping technique pulled from the real Safety Plan.
 
-**Verified example:** intensity `8/10` with the same profile → suggested technique `"journaling"`, one of the three logged strategies (not invented).
+![Craving Check-In showing intensity buttons and the live-suggested coping technique](docs/screenshots/04-craving-checkin.png)
+
+**Verified example:** intensity `8/10` with the same profile → suggested technique **"call my sponsor"**, one of the three logged strategies (not invented).
 
 ### Step 6.5 — Multi-Language (Optional, Strong Differentiator)
 **Do:** Switch to a Spanish-preferred-language user, build a quick Spanish Safety Plan (e.g. `triggers: ["ansiedad", "soledad"]`, `coping_strategies: ["escribir un diario", "llamar a Miguel"]`), trigger Crisis Mode.
