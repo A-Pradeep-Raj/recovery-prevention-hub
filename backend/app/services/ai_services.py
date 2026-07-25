@@ -22,6 +22,9 @@ settings = get_settings()
 logger = logging.getLogger("app.ai_services")
 
 _GEMINI_MODEL_NAME = "gemini-2.5-flash"
+_GENERATIVE_LANGUAGE_ENDPOINT = (
+    f"https://generativelanguage.googleapis.com/v1beta/models/{_GEMINI_MODEL_NAME}:generateContent"
+)
 _vertex_initialized = False
 
 
@@ -35,14 +38,49 @@ def _ensure_vertex_initialized() -> None:
     _vertex_initialized = True
 
 
-def _call_gemini(prompt: str) -> str:
-    """Single network-call boundary for the Vertex AI Gemini model."""
+def _call_gemini_via_api_key(prompt: str) -> str:
+    """Call the Generative Language API (Gemini) directly over REST using a
+    restricted GCP API key (GENAI_API_KEY), scoped only to
+    generativelanguage.googleapis.com. Preferred auth path when a key is
+    configured — avoids requiring Application Default Credentials."""
+    import requests
+
+    resp = requests.post(
+        _GENERATIVE_LANGUAGE_ENDPOINT,
+        params={"key": settings.genai_api_key},
+        json={"contents": [{"parts": [{"text": prompt}]}]},
+        timeout=30,
+    )
+    resp.raise_for_status()
+    data = resp.json()
+    return data["candidates"][0]["content"]["parts"][0]["text"]
+
+
+def _call_gemini_via_adc(prompt: str) -> str:
+    """Call Vertex AI Gemini using Application Default Credentials
+    (fallback auth path when no GENAI_API_KEY is configured)."""
     from vertexai.generative_models import GenerativeModel
 
     _ensure_vertex_initialized()
     model = GenerativeModel(_GEMINI_MODEL_NAME)
     response = model.generate_content(prompt)
     return response.text
+
+
+def _call_gemini(prompt: str) -> str:
+    """Single network-call boundary for the Gemini model. Uses a restricted
+    GCP API key (GENAI_API_KEY) when configured, otherwise falls back to
+    Vertex AI + Application Default Credentials. If the API-key call fails
+    (e.g. AI Studio prepay-credit/quota issue on that key), automatically
+    retries via the ADC path rather than surfacing a generic fallback —
+    the API key remains the demonstrated/preferred auth mechanism, but a
+    billing hiccup on it must not silently degrade the live demo."""
+    if settings.genai_api_key:
+        try:
+            return _call_gemini_via_api_key(prompt)
+        except Exception:
+            logger.warning("_call_gemini: GENAI_API_KEY call failed, retrying via Vertex AI ADC", exc_info=True)
+    return _call_gemini_via_adc(prompt)
 
 
 def _gemini_available() -> bool:
@@ -120,15 +158,37 @@ def _not_grounded_message(language: str) -> str:
 # Translation (Cloud Translation API — spec.md Section 5.2)
 # ---------------------------------------------------------------------------
 
+_TRANSLATE_ENDPOINT = "https://translation.googleapis.com/language/translate/v2"
+
+
+def _translate_via_api_key(text: str, target_language: str, source_language: str | None) -> str:
+    """Call Cloud Translation directly over REST using the restricted
+    GENAI_API_KEY (also scoped to translate.googleapis.com)."""
+    import requests
+
+    params: dict = {"key": settings.genai_api_key, "q": text, "target": target_language}
+    if source_language:
+        params["source"] = source_language
+    resp = requests.post(_TRANSLATE_ENDPOINT, data=params, timeout=30)
+    resp.raise_for_status()
+    return resp.json()["data"]["translations"][0]["translatedText"]
+
+
+def _translate_via_adc(text: str, target_language: str) -> str:
+    from google.cloud import translate_v2 as translate
+
+    client = translate.Client()
+    return client.translate(text, target_language=target_language)["translatedText"]
+
+
 @lru_cache(maxsize=512)
 def _translate_cached(text: str, target_language: str, source_language: str | None) -> str:
     if settings.use_mock_ai or target_language == source_language:
         return f"[MOCK-{target_language.upper()}] {text}"
     try:
-        from google.cloud import translate_v2 as translate
-
-        client = translate.Client()
-        return client.translate(text, target_language=target_language)["translatedText"]
+        if settings.genai_api_key:
+            return _translate_via_api_key(text, target_language, source_language)
+        return _translate_via_adc(text, target_language)
     except Exception:
         logger.warning("translate_text: Cloud Translation call failed, falling back to mock", exc_info=True)
         return f"[MOCK-{target_language.upper()}] {text}"

@@ -6,7 +6,9 @@ python-multipart==0.0.9
 pytest==8.3.3
 httpx==0.27.2
 # Generative AI (spec.md Section 4.8 — Generative AI Usage, Mandatory).
-# Vertex AI SDK: billed through GCP Cloud Billing via ADC, no separate API key.
+# Vertex AI SDK: used as the ADC fallback auth path when no GENAI_API_KEY is set.
 google-cloud-aiplatform==1.71.1
-# Cloud Translation API (spec.md Section 5.2).
+# Cloud Translation API (spec.md Section 5.2). Used as the ADC fallback auth path.
 google-cloud-translate==3.15.5
+# Direct REST calls to Gemini/Translation using a restricted GCP API key (GENAI_API_KEY).
+requests==2.32.3

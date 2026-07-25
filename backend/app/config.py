@@ -8,9 +8,12 @@ class Settings(BaseSettings):
     gcp_region: str = "us-central1"
     use_mock_ai: bool = True
     # Vertex AI Gemini (spec.md Section 4.8 — Generative AI Usage, Mandatory).
-    # No API key needed: auth is via Application Default Credentials (the
-    # Cloud Run service account's roles/aiplatform.user grant in production,
-    # or `gcloud auth application-default login` locally).
+    # Preferred auth: GENAI_API_KEY (a restricted GCP API key scoped to
+    # generativelanguage.googleapis.com + translate.googleapis.com), used via
+    # direct REST calls. Falls back to Application Default Credentials (the
+    # Cloud Run service account's roles/aiplatform.user grant, or
+    # `gcloud auth application-default login` locally) when no key is set.
+    genai_api_key: str | None = None
     sendgrid_api_key: str | None = None
     sendgrid_from_email: str = "noreply@recoveryhub.example.com"
     jwt_secret: str = "change-me"
